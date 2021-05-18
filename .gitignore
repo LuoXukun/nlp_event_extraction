@@ -1,0 +1,14 @@
+run_*.py
+/inference
+README_UER*
+.travis.yml
+/models/cluecorpussmall_spm.model
+/models/albert
+/models/gpt2
+/models/t5
+/models/t5-v1_1
+/models/google_*_en_vocab.txt
+/models/google_zh_ancient_vocab.txt
+/models/google_zh_poem_vocab.txt
+/models/google_zh_with_sentinel_vocab.txt
+/datasets/event_extraction_dataset/*
