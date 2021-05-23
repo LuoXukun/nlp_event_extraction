@@ -1,6 +1,6 @@
 [PAD]
-[unused1]
-[unused2]
+[WHT]
+[PUNC]
 [unused3]
 [unused4]
 [unused5]
