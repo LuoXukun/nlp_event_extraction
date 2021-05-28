@@ -299,16 +299,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     args = parser.parse_args()
 
-    args.k_fold = K
+    args.K = K
     args.vocab_path = vocabulary_path
     args.spm_model_path = None
 
     event_dataset = EventDataset(args, TEST, 0, True)
     event_data_loader = DataLoader(event_dataset, batch_size=2, shuffle=False, collate_fn=collate_fn)
     for batch in event_data_loader:
-        print(batch[0])
-        print(batch[1])
-        print(batch[2])
-        print(batch[3])
-        print(batch[4])
+        print(batch[0][0])
+        print(batch[1][0])
+        print(batch[2][0])
+        for i in range(65):
+            print(batch[3][0][i])
+        print(batch[4][0])
         break

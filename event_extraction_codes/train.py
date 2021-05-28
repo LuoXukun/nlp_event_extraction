@@ -51,22 +51,26 @@ def load_parameters():
     # Path options.
     parser.add_argument("--pretrained_model_path", default=pretrained_model_path, type=str,
                         help="Path of the pretrained model file.")
-    parser.add_argument("--last_model_path", default=last_model_path, type=str,
+    """ parser.add_argument("--last_model_path", default=last_model_path, type=str,
                         help="Path of the output last output model.")
     parser.add_argument("--best_model_path", default=best_model_path, type=str,
                         help="Path of the output best output model.")
+    parser.add_argument("--result_path", default=result_path, type=str,
+                        help="Path of the results.") """
     parser.add_argument("--middle_model_path", default=None, type=str,
                         help="Path of the middle model input path.")
-    parser.add_argument("--result_path", default=result_path, type=str,
-                        help="Path of the results.")
+    parser.add_argument("--save_dir_name", default="baseline", type=str,
+                        help="Dir name for saving models and results")
     parser.add_argument("--vocab_path", default=vocabulary_path, type=str,
                         help="Path of the vocabulary file.")
+    parser.add_argument("--config_path", default=config_path, type=str,
+                        help="Path of the BERT config file.")
     parser.add_argument("--spm_model_path", default=None, type=str,
                         help="Path of the sentence piece model.")
 
     # Model options.
     parser.add_argument("--model_type", 
-        choices=["baseline"],
+        choices=["baseline", "baseline-lstm"],
         default="baseline",
         help="What kind of model do you want to use.")
     parser.add_argument("--batch_size", type=int, default=batch_size,
@@ -76,10 +80,10 @@ def load_parameters():
     model_opts(parser)
     
     # Training options.
-    parser.add_argument("--dropout", type=float, default=dropout,
-                        help="Dropout.")
     parser.add_argument("--epochs_num", type=int, default=epochs_num,
                         help="Number of epochs.")
+    parser.add_argument("--eval_steps", type=int, default=eval_epoch,
+                        help="Specific steps to eval the model.")
     parser.add_argument("--report_steps", type=int, default=report_steps,
                         help="Specific steps to print prompt.")
     parser.add_argument("--seed", type=int, default=seed,
@@ -92,6 +96,8 @@ def load_parameters():
 
     args = parser.parse_args()
 
+    args = load_hyperparam(args)
+
     # Labels list.
     args.scheme_dict = SchemaDict()
     args.tokenizer = EventCharTokenizer(args)
@@ -100,6 +106,13 @@ def load_parameters():
     # Vocabulary.
     args.vocab = args.tokenizer.vocab
     args.vocab_len = len(args.vocab)
+    # Scheduler
+    #args.scheduler = scheduler
+    args.power = power
+    # Save path
+    args.last_model_path = os.path.join(uer_dir, "result_models/" + args.save_dir_name + "/last/model.bin")
+    args.best_model_path = os.path.join(uer_dir, "result_models/" + args.save_dir_name + "/best/model.bin")
+    result_path = os.path.join(uer_dir, "results/" + args.save_dir_name + "/test_result.txt")
 
     if torch.cuda.is_available(): args.use_cuda = True
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -155,15 +168,16 @@ def build_optimizer(args, model):
         scheduler = str2scheduler[args.scheduler](optimizer)
     elif args.scheduler in ["constant_with_warmup"]:
         scheduler = str2scheduler[args.scheduler](optimizer, args.train_steps*args.warmup)
+    elif args.scheduler in ["polynomial"]:
+        scheduler = str2scheduler[args.scheduler](optimizer, args.train_steps*args.warmup, args.train_steps, power=args.power)
     else:
         scheduler = str2scheduler[args.scheduler](optimizer, args.train_steps*args.warmup, args.train_steps)
     return optimizer, scheduler
 
 # Evaluation function.
-def evaluate(model, args, is_test, k_idx=None):
-    update_flag = True if (k_idx is None or k_idx == 0) else False
+def evaluate(model, args, is_test, k_idx=None, update_flag=True):
     if is_test:
-        event_dataset = EventDataset(TEST, update=update_flag, merge=args.merge, separate=args.separate)
+        event_dataset = EventDataset(args, TEST, update=update_flag)
         # When evaluating the test set, the batch must be 1.
         event_data_loader = DataLoader(event_dataset, batch_size=1, shuffle=False, collate_fn=collate_fn)
         if k_idx is not None:
@@ -174,7 +188,7 @@ def evaluate(model, args, is_test, k_idx=None):
         fw = open(result_file, "w", encoding="utf-8")
     else:
         assert k_idx is not None
-        event_dataset = EventDataset(VALID, k_idx, args.K, update=update_flag, merge=args.merge, separate=args.separate)
+        event_dataset = EventDataset(args, VALID, k_idx, update=update_flag)
         event_data_loader = DataLoader(event_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn)
 
     correct, gold_number, pred_number = 0, 0, 0
@@ -195,10 +209,10 @@ def evaluate(model, args, is_test, k_idx=None):
         for j in range(0, len(tokens_id)):
             sentence = text[j]
             if is_test:
-                pred_result = {"text": sentence, "results": []}
+                pred_result = {"text": sentence, "event_list": []}
             for event_id in range(0, args.events_num):
-                gold_tags = [str(args.role_label_list[int(p)]) for p in tags[j][event_id]]
-                pred_tags = [str(args.role_label_list[p]) for p in best_path[j][event_id]]
+                gold_tags = [str(role_label_list[int(p)]) for p in tags[j][event_id]]
+                pred_tags = [str(role_label_list[p]) for p in best_path[j][event_id]]
                 sentence_len = len(sentence)
 
                 """ if i == 0 and j == 0:
@@ -255,18 +269,22 @@ def evaluate(model, args, is_test, k_idx=None):
                     """ Get the results. """
                     if is_test:
                         event_type = args.scheme_dict.get_event_type(event_id)
+                        pred_arguments = []
                         for pair in pred_pos:
                             role_type = args.scheme_dict.get_role_type(event_id, int(pred_tags[pair[0]].split("-")[-1]))
                             if role_type is not None:
-                                pred_result["results"].append((event_type, role_type, sentence[pair[0]:pair[1]]))
+                                pred_arguments.append({"role": role_type, "argument": sentence[pair[0]:pair[1]]})
+                        pred_result["event_list"].append({"event_type": event_type, "arguments": pred_arguments})
                 
                 for pair in pred_pos:
-                    if pair not in gold_tags: continue
-                    for k in range(pair[0], pair[1]):
+                    if pair not in gold_pos: continue
+                    if gold_tags[pair[0]] == pred_tags[pair[0]]:
+                        correct += 1
+                    """ for k in range(pair[0], pair[1]):
                         if gold_tags[k] != pred_tags[k]: 
                             break
                     else: 
-                        correct += 1
+                        correct += 1 """
                 if len(pred_pos) > 0 and len(gold_pos) > 0: event_correct += 1
             
             if is_test:
@@ -278,7 +296,7 @@ def evaluate(model, args, is_test, k_idx=None):
     event_p = event_correct / event_pred if event_pred != 0 else 0
     event_r = event_correct / event_gold
     event_f1 = 2 * event_p * event_r / (event_p + event_r) if event_p != 0 else 0
-    print("Event: total_right, total_predict, predict_right: {}, {}, {}".format(gold_number, pred_number, correct))
+    print("Event: total_right, total_predict, predict_right: {}, {}, {}".format(event_gold, event_pred, event_correct))
     print("Event: precision, recall, and f1: {:.3f}, {:.3f}, {:.3f}".format(event_p, event_r, event_f1))
 
     p = correct / pred_number if pred_number != 0 else 0
@@ -304,13 +322,8 @@ def train_kfold(args):
         # Evaluate the middle model.
         if args.middle_model_path is not None and k_idx == 0:
             print("Start evaluate middle model.")
-            best_f1 = evaluate(model, args, True)
-
-        # Optimizer.
-        optimizer, scheduler = build_optimizer(args, model)
-        if args.middle_model_path is not None:
-            print("Loading optimizer...")
-            optimizer.load_state_dict(args.state_dict["optimizer"])
+            best_f1 = evaluate(model, args, True, k_idx=0, update_flag=True)
+            exit()
 
         print("--------------- The {}-th fold as the validation set... ---------------".format(k_idx+1))
 
@@ -318,6 +331,14 @@ def train_kfold(args):
         update_flag = True if k_idx == 0 else False
         event_dataset = EventDataset(args, TRAIN, k_idx, update=update_flag)
         event_data_loader = DataLoader(event_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
+
+        args.train_steps = int(len(event_dataset) * args.epochs_num / args.batch_size) + 1
+
+        # Optimizer.
+        optimizer, scheduler = build_optimizer(args, model)
+        """ if args.middle_model_path is not None:
+            print("Loading optimizer...")
+            optimizer.load_state_dict(args.state_dict["optimizer"]) """
 
         if k_idx == 0:
             print("Data length: ", len(event_dataset))
@@ -330,11 +351,14 @@ def train_kfold(args):
                 text, tokens, tokens_id, tags, seg = batch
                 tokens_id = tokens_id.to(args.device)
                 tags = tags.to(args.device)
-                sef = seg.to(args.device)
+                seg = seg.to(args.device)
 
                 feats = model(tokens_id, seg)
 
+                #print(feats.shape, tags.shape)
                 loss = model.get_loss(feats, tags)
+                if torch.cuda.device_count() > 1:
+                    loss = torch.mean(loss)
 
                 if (i + 1) % args.report_steps == 0:
                     print("Epoch id: {}, Training steps: {}, Loss: {:.6f}".format(epoch, i+1, loss))
@@ -346,8 +370,8 @@ def train_kfold(args):
             """ if epoch == 1:
                 save_model_with_optim(model, optimizer, get_k_file_path(args.best_model_path, k_idx)) """
 
-            if args.K > 1:
-                f1 = evaluate(model, args, False, k_idx)
+            if args.K > 1 and epoch % args.eval_steps == 0:
+                f1 = evaluate(model, args, False, k_idx, update_flag=False)
                 if f1 >= best_f1:
                     best_f1 = f1
                     save_model_with_optim(model, optimizer, get_k_file_path(args.best_model_path, k_idx))
@@ -363,7 +387,7 @@ def train_kfold(args):
         else:
             model.load_state_dict(torch.load(get_k_file_path(args.last_model_path, k_idx)), strict=False)
 
-        evaluate(model, args, True, k_idx)
+        evaluate(model, args, True, k_idx, update_flag=update_flag)
 
 def main():
     args = load_parameters()
