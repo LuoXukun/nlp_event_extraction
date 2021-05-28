@@ -186,12 +186,17 @@ class EventDataset(Dataset):
                         argument_end_index = argument_start_index + len(argument["argument"])
                         role_label = self.schema_dict.get_role_id(event_type_id, argument["role"])
 
-                        # Calculating the overlap number. Train: 1492.
+                        # Calculating the overlap number across event. Train: 1492.
                         """ if np.any(np.array(tags)[:, argument_start_index:argument_end_index]):
                             #print(np.array(tags)[:, argument_start_index:argument_end_index])
                             is_overlap = True """
                         
-                        self.__sequence_tag__(argument_start_index, argument_end_index, str(role_label), tags[event_type_id])
+                        # Calculating the overlap number in event. Train: 841.
+                        """ if np.any(np.array(tags)[event_type_id, argument_start_index:argument_end_index]):
+                            is_overlap = True """
+                        
+                        if not np.any(np.array(tags)[:, argument_start_index:argument_end_index]):
+                            self.__sequence_tag__(argument_start_index, argument_end_index, str(role_label), tags[event_type_id])
                 preprocessed_sample = json.dumps({"text": text, "tokens": tokens, "tokens_id": tokens_id, "tags": tags}, ensure_ascii=False)
                 # if is_overlap is True: self.overlap_num += 1
                 # if idx == 0: print(preprocessed_sample)
@@ -303,7 +308,7 @@ if __name__ == "__main__":
     args.vocab_path = vocabulary_path
     args.spm_model_path = None
 
-    event_dataset = EventDataset(args, TEST, 0, True)
+    event_dataset = EventDataset(args, TRAIN, 0, True)
     event_data_loader = DataLoader(event_dataset, batch_size=2, shuffle=False, collate_fn=collate_fn)
     for batch in event_data_loader:
         print(batch[0][0])
