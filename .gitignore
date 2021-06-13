@@ -15,3 +15,6 @@
 /results/
 /logs/
 /models/bert/*.bin
+.idea/
+.vscode/
+*.pyc
