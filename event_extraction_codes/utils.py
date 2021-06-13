@@ -16,7 +16,8 @@ from event_extraction_codes.config import *
 """ Check if the dir of file_path exists. If not, create it. """
 def check_file_path(file_path):
     dir_name = os.path.dirname(file_path)
-    if os.path.exists(dir_name): return
+    if os.path.exists(dir_name):
+        return
     os.makedirs(dir_name)
 
 def make_event_corpus():
@@ -31,6 +32,7 @@ def make_event_corpus():
             text_1 = text[0:len(text)//2] + "\n"
             text_2 = text[len(text)//2:] + "\n"
             fw.write(text_1 + text_2 + "\n")
+    fw.close()
 
 if __name__ == "__main__":
     make_event_corpus()
