@@ -112,7 +112,7 @@ def load_parameters():
     # Save path
     args.last_model_path = os.path.join(uer_dir, "result_models/" + args.save_dir_name + "/last/model.bin")
     args.best_model_path = os.path.join(uer_dir, "result_models/" + args.save_dir_name + "/best/model.bin")
-    result_path = os.path.join(uer_dir, "results/" + args.save_dir_name + "/test_result.txt")
+    args.result_path = os.path.join(uer_dir, "results/" + args.save_dir_name + "/test_result.txt")
 
     if torch.cuda.is_available(): args.use_cuda = True
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
