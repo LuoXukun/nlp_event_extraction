@@ -70,7 +70,7 @@ def load_parameters():
 
     # Model options.
     parser.add_argument("--model_type", 
-        choices=["baseline", "baseline-lstm"],
+        choices=["baseline", "baseline-lstm", "hierarchical"],
         default="baseline",
         help="What kind of model do you want to use.")
     parser.add_argument("--batch_size", type=int, default=batch_size,
@@ -78,6 +78,13 @@ def load_parameters():
     parser.add_argument("--seq_length", default=seq_length, type=int,
                         help="Sequence length.")
     model_opts(parser)
+
+    # For HierarchicalModel
+    parser.add_argument("--entity_gate", default=entity_gate, type=float,
+                        help="The entity threshold of Hierarchical Model.")
+    parser.add_argument("--role_gate", default=role_gate, type=int,
+                        help="The role threshold of Hierarchical Model.")
+    
     
     # Training options.
     parser.add_argument("--epochs_num", type=int, default=epochs_num,
@@ -99,10 +106,11 @@ def load_parameters():
     args = load_hyperparam(args)
 
     # Labels list.
-    args.scheme_dict = SchemaDict()
+    args.schema_dict = SchemaDict()
     args.tokenizer = EventCharTokenizer(args)
     args.role_tags_num = len(role_label_list)
-    args.events_num = args.scheme_dict.get_event_len()
+    args.events_num = args.schema_dict.get_event_len()
+    args.max_role_len = args.schema_dict.max_role_len
     # Vocabulary.
     args.vocab = args.tokenizer.vocab
     args.vocab_len = len(args.vocab)
@@ -128,7 +136,7 @@ def build_model(args):
     # Load or initialize parameters.
     if args.pretrained_model_path is not None:
         # Initialize with pretrained model.
-        model.load_state_dict(torch.load(args.pretrained_model_path), strict=False)
+        model.load_state_dict(torch.load(args.pretrained_model_path, map_location=torch.device('cpu')), strict=False)
     else:
         # Initialize with normal distribution.
         for n, p in list(model.named_parameters()):
@@ -179,7 +187,7 @@ def evaluate(model, args, is_test, k_idx=None, update_flag=True):
     if is_test:
         event_dataset = EventDataset(args, TEST, update=update_flag)
         # When evaluating the test set, the batch must be 1.
-        event_data_loader = DataLoader(event_dataset, batch_size=1, shuffle=False, collate_fn=collate_fn)
+        event_data_loader = DataLoader(event_dataset, batch_size=1, shuffle=False, collate_fn=lambda x: collate_fn(x, model_type=args.model_type))
         if k_idx is not None:
             result_file = get_k_file_path(args.result_path, k_idx)
         else:
@@ -189,7 +197,8 @@ def evaluate(model, args, is_test, k_idx=None, update_flag=True):
     else:
         assert k_idx is not None
         event_dataset = EventDataset(args, VALID, k_idx, update=update_flag)
-        event_data_loader = DataLoader(event_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn)
+        event_data_loader = DataLoader(event_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=lambda x: collate_fn(x, model_type=args.model_type))
+        fw = None
 
     correct, gold_number, pred_number = 0, 0, 0
     event_correct, event_gold, event_pred = 0, 0, 0
@@ -198,97 +207,14 @@ def evaluate(model, args, is_test, k_idx=None, update_flag=True):
 
     for i, batch in enumerate(event_data_loader):
 
-        text, tokens, tokens_id, tags, seg = batch
-        tokens_id = tokens_id.to(args.device)
-        seg = seg.to(args.device)
+        device_batch = model.get_batch(batch)
 
-        feats = model(tokens_id, seg)
+        feats = model.test(device_batch)
 
-        best_path = model.get_best_path(feats)
+        eval_rets = model.evaluate(args, batch, feats, is_test, fw)
 
-        for j in range(0, len(tokens_id)):
-            sentence = text[j]
-            if is_test:
-                pred_result = {"text": sentence, "event_list": []}
-            for event_id in range(0, args.events_num):
-                gold_tags = [str(role_label_list[int(p)]) for p in tags[j][event_id]]
-                pred_tags = [str(role_label_list[p]) for p in best_path[j][event_id]]
-                sentence_len = len(sentence)
-
-                """ if i == 0 and j == 0:
-                    print("sentence: ", sentence) """
-
-                """ Evaluate. """
-                for k in range(sentence_len):
-                    # Gold.
-                    if gold_tags[k][0] == "S" or gold_tags[k][0] == "B":
-                        gold_number += 1
-                    # Predict.
-                    if pred_tags[k][0] == "S" or pred_tags[k][0] == "B":
-                        pred_number += 1
-                
-                pred_pos, gold_pos = [], []
-                start, end = 0, 0
-                # Correct.
-                for k in range(sentence_len):
-                    if gold_tags[k][0] == "S":
-                        start = k
-                        end = k + 1
-                    elif gold_tags[k][0] == "B":
-                        start = k
-                        end = k + 1
-                        while end < sentence_len:
-                            if gold_tags[end][0] == "I": end += 1
-                            elif gold_tags[end][0] == "E":
-                                end += 1
-                                break
-                            else: break
-                    else:
-                        continue
-                    gold_pos.append((start, end))
-                if len(gold_pos) > 0: event_gold += 1
-                # Predict
-                for k in range(sentence_len):
-                    if pred_tags[k][0] == "S":
-                        start = k
-                        end = k + 1
-                    elif pred_tags[k][0] == "B":
-                        start = k
-                        end = k + 1
-                        while end < sentence_len:
-                            if pred_tags[end][0] == "I": end += 1
-                            elif pred_tags[end][0] == "E":
-                                end += 1
-                                break
-                            else: break
-                    else:
-                        continue
-                    pred_pos.append((start, end))
-                if len(pred_pos) > 0: 
-                    event_pred += 1
-                    """ Get the results. """
-                    if is_test:
-                        event_type = args.scheme_dict.get_event_type(event_id)
-                        pred_arguments = []
-                        for pair in pred_pos:
-                            role_type = args.scheme_dict.get_role_type(event_id, int(pred_tags[pair[0]].split("-")[-1]))
-                            if role_type is not None:
-                                pred_arguments.append({"role": role_type, "argument": sentence[pair[0]:pair[1]]})
-                        pred_result["event_list"].append({"event_type": event_type, "arguments": pred_arguments})
-                
-                for pair in pred_pos:
-                    if pair not in gold_pos: continue
-                    if gold_tags[pair[0]] == pred_tags[pair[0]]:
-                        correct += 1
-                    """ for k in range(pair[0], pair[1]):
-                        if gold_tags[k] != pred_tags[k]: 
-                            break
-                    else: 
-                        correct += 1 """
-                if len(pred_pos) > 0 and len(gold_pos) > 0: event_correct += 1
-            
-            if is_test:
-                fw.write(json.dumps(pred_result, ensure_ascii=False) + "\n")
+        correct += eval_rets[0]; gold_number += eval_rets[1]; pred_number += eval_rets[2]
+        event_correct += eval_rets[3]; event_gold += eval_rets[4]; event_pred += eval_rets[5]
 
     if is_test:
         fw.close()
@@ -330,7 +256,7 @@ def train_kfold(args):
         # Get the training data.
         update_flag = True if k_idx == 0 else False
         event_dataset = EventDataset(args, TRAIN, k_idx, update=update_flag)
-        event_data_loader = DataLoader(event_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
+        event_data_loader = DataLoader(event_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: collate_fn(x, model_type=args.model_type))
 
         args.train_steps = int(len(event_dataset) * args.epochs_num / args.batch_size) + 1
 
@@ -348,15 +274,11 @@ def train_kfold(args):
             for i, batch in enumerate(event_data_loader):
                 model.zero_grad()
 
-                text, tokens, tokens_id, tags, seg = batch
-                tokens_id = tokens_id.to(args.device)
-                tags = tags.to(args.device)
-                seg = seg.to(args.device)
+                device_batch = model.get_batch(batch)
 
-                feats = model(tokens_id, seg)
+                feats = model(device_batch)
 
-                #print(feats.shape, tags.shape)
-                loss = model.get_loss(feats, tags)
+                loss = model.get_loss(feats, device_batch)
                 if torch.cuda.device_count() > 1:
                     loss = torch.mean(loss)
 
@@ -374,9 +296,11 @@ def train_kfold(args):
                 f1 = evaluate(model, args, False, k_idx, update_flag=False)
                 if f1 >= best_f1:
                     best_f1 = f1
+                    print("Saving middle model...")
                     save_model_with_optim(model, optimizer, get_k_file_path(args.best_model_path, k_idx))
 
         # Save the last optimizer and model.
+        print("Saving last model...")
         save_model_with_optim(model, optimizer, get_k_file_path(args.last_model_path, k_idx))
 
         # Evaluation phase.

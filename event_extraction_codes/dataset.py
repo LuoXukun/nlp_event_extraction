@@ -45,7 +45,7 @@ class EventCharTokenizer(Tokenizer):
 class SchemaDict():
     def __init__(self):
         self.schema_path = origin_schema_path
-
+        self.max_role_len = 6
         self.event_dict, self.event_list = {}, []
         self.__init_event__()
         self.__init_role__()
@@ -112,6 +112,7 @@ class EventDataset(Dataset):
         self.index = index
         self.k_fold = args.K
         self.vocab_path = args.vocab_path
+        self.model_type = args.model_type
 
         self.origin_train_path = origin_train_path
         self.origin_test_path = origin_test_path
@@ -129,14 +130,26 @@ class EventDataset(Dataset):
         # Tokenizer
         self.tokenizer = EventCharTokenizer(args)
 
+        # Preprocess
+        self.__preprocess_data__ = {
+            "baseline": self.__preprocess_data_baseline__,
+            "baseline_lstm": self.__preprocess_data_baseline__,
+            "hierarchical": self.__preprocess_data_hierarchical__
+        }
         if not os.path.exists(self.preprocessed_data_path) or update is True:
-            self.__preprocess_data_baseline__()
+            self.__preprocess_data__[self.model_type]()
         
-        self.__get_data__()
+        self.__get_data__ = {
+            "baseline": self.__get_data_baseline__,
+            "baseline_lstm": self.__get_data_baseline__,
+            "hierarchical": self.__get_data_hierarchical__
+        }
+        self.__get_data__[self.model_type]()
     
+    """ Baseline: Normal sequence tagging. """
     def __preprocess_data_baseline__(self):
         """ Generate the preprocessed data. """
-        print("Preprocessing dataset...")
+        print("Baseline: Preprocessing dataset...")
         check_file_path(self.preprocessed_data_path)
         fw = open(self.preprocessed_data_path, "w", encoding="utf-8")
 
@@ -205,7 +218,7 @@ class EventDataset(Dataset):
         #print("Max length: {}, overlap_num: {}.".format(self.max_length, self.overlap_num))
         fw.close()
 
-    def __get_data__(self):
+    def __get_data_baseline__(self):
         fr_pre = open(self.preprocessed_data_path, "r", encoding="utf-8")
         data_lines = fr_pre.readlines()
         data_len = len(data_lines)
@@ -242,8 +255,125 @@ class EventDataset(Dataset):
         
         return
     
+    """ Hierarchical: Get the entities and then identify their role one by one. """
+    def __preprocess_data_hierarchical__(self):
+        print("Hierarchical: Preprocessing dataset...")
+        check_file_path(self.preprocessed_data_path)
+        fw = open(self.preprocessed_data_path, "w", encoding="utf-8")
+
+        with open(self.origin_data_path, "r", encoding="utf-8") as fr:
+            for idx, line in enumerate(fr):
+                line = json.loads(line)
+                text, event_list = line["text"], line["event_list"]
+                tokens = [CLS_TOKEN] + self.tokenizer.tokenize(line["text"])
+                tokens_id = self.tokenizer.convert_tokens_to_ids(tokens)
+                text_len = len(text) + 1
+
+                # Get the dict like {entity_index: {(event_id, role_id),...}, ...}
+                entities_dict = {}
+                entities_head, entities_tail = [0 for i in range(text_len)], [0 for i in range(text_len)]
+                for event in event_list:
+                    event_type, arguments = event["event_type"], event["arguments"]
+                    event_type_id = self.schema_dict.get_event_id(event_type)
+                    assert event_type_id is not None
+                    for argument in arguments:
+                        argument_start_index = int(argument["argument_start_index"]) + 1
+                        argument_end_index = argument_start_index + len(argument["argument"]) - 1
+                        role_id = self.schema_dict.get_role_id(event_type_id, argument["role"])
+                        entity_pair = (argument_start_index, argument_end_index)
+                        if str(entity_pair) not in entities_dict.keys():
+                            entities_dict[str(entity_pair)] = set()
+                        entities_dict[str(entity_pair)].add((event_type_id, role_id))
+                        entities_head[argument_start_index] = 1
+                        entities_tail[argument_end_index] = 1
+                for key in entities_dict.keys():
+                    entities_dict[key] = list(entities_dict[key])
+
+                # Generate the data.
+                preprocessed_sample = json.dumps({
+                    "text": text, "tokens": tokens, "tokens_id": tokens_id, 
+                    "entities_head": entities_head, "entities_tail": entities_tail, "roles_dict": entities_dict
+                }, ensure_ascii=False)
+                fw.write(preprocessed_sample + "\n")
+        fw.close()
+    
+    def __get_data_hierarchical__(self):
+        fr_pre = open(self.preprocessed_data_path, "r", encoding="utf-8")
+        data_lines = fr_pre.readlines()
+        data_len = len(data_lines)
+        state, k_fold, index = self.state, self.k_fold, self.index
+
+        if state == TRAIN:
+            if k_fold > 1:
+                self.data_lines = data_lines[:int((index % k_fold) * data_len / k_fold)] + \
+                                    data_lines[int((index % k_fold + 1) * data_len / k_fold):]
+            else:
+                self.data_lines = data_lines
+        elif state == VALID:
+            if k_fold > 1:
+                self.data_lines = data_lines[int((index % k_fold) * data_len / k_fold): \
+                                    int((index % k_fold + 1) * data_len / k_fold)]
+            else:
+                self.data_lines = []
+        else:
+            self.data_lines = data_lines
+
+        fr_pre.close()
+
+        self.text, self.tokens, self.tokens_id = [], [], []
+        self.entities_head, self.entities_tail, self.roles_list = [], [], []
+        self.entity_head, self.entity_tail, self.entity_roles = [], [], []
+        for line in self.data_lines:
+            line = line.strip()
+            if line == "": continue
+            line = json.loads(line, encoding="utf-8")
+            # roles_dict = {(index1, index2): {(event_type_id, role_type_id), ...}}
+            roles_dict = line["roles_dict"]
+            if state != TRAIN:
+                self.text.append(line["text"])
+                self.tokens.append(line["tokens"])
+                self.tokens_id.append(line["tokens_id"])
+                self.entities_head.append(line["entities_head"])
+                self.entities_tail.append(line["entities_tail"])
+                self.entity_head.append(-1)     # Ignore it.
+                self.entity_tail.append(-1)     # Ignore it.
+                self.entity_roles.append([-1])    # Ignore it.
+                roles_list = set()
+                for key, value in roles_dict.items():
+                    _key = eval(key)
+                    for pair in value:
+                        # (index1, index2, event_type_id, role_type_id)
+                        roles_list.add((int(_key[0]), int(_key[1]), pair[0], pair[1]))
+                self.roles_list.append(roles_list)
+            else:
+                for key, value in roles_dict.items():
+                    _key = eval(key)
+                    if len(list(value)) == 0: continue
+                    self.text.append(line["text"])
+                    self.tokens.append(line["tokens"])
+                    self.tokens_id.append(line["tokens_id"])
+                    self.entities_head.append(line["entities_head"])
+                    self.entities_tail.append(line["entities_tail"])
+                    self.roles_list.append(-1)  # Ignore it.
+                    self.entity_head.append(_key[0])
+                    self.entity_tail.append(_key[1])
+                    entity_roles = [[0 for i in range(self.schema_dict.max_role_len)] for j in range(self.schema_dict.get_event_len())]
+                    for pair in value:
+                        entity_roles[pair[0]][pair[1]] = 1
+                    self.entity_roles.append(entity_roles)
+        #print("len: ", len(self.text), len(self.tokens), len(self.tokens_id), len(self.entities_head), \
+        #    len(self.entities_tail), len(self.entity_head), len(self.entity_tail), len(self.entity_roles), len(self.roles_list))
+        self.length = len(self.text)
+
     def __getitem__(self, index):
-        return self.text[index], self.tokens[index], self.tokens_id[index], self.tags[index]
+        if "baseline" in self.model_type:
+            return self.text[index], self.tokens[index], self.tokens_id[index], self.tags[index]
+        elif self.model_type == "hierarchical":
+            return self.text[index], self.tokens[index], self.tokens_id[index], self.entities_head[index], \
+                self.entities_tail[index], self.entity_head[index], self.entity_tail[index], self.entity_roles[index], self.roles_list[index]
+        else:
+            print("Undefined mode_type!")
+            exit()
 
     def __len__(self):
         return self.length
@@ -263,7 +393,7 @@ class EventDataset(Dataset):
         
         return
 
-def collate_fn(batch, max_len=512):
+def collate_fn(batch, max_len=512, model_type="baseline"):
     """ 
         Collate_fn function. Arrange the batch in reverse order of length.
 
@@ -271,6 +401,7 @@ def collate_fn(batch, max_len=512):
 
             batch:              The batch data.
             max_len:            The max length.
+            model_type:         The model type.
         
         Returns:
             ([text], [tokens], [tokens_id], [tags], [seg])
@@ -279,14 +410,30 @@ def collate_fn(batch, max_len=512):
     max_length = min(max(data_length), max_len)
     text, tokens = [b[0] for b in batch], [b[1] for b in batch]
     tokens_id = [torch.FloatTensor(b[2]) for b in batch]
-    tags = [torch.FloatTensor(b[3]).T for b in batch]
-    #print(tags[0].shape)
     seg = [torch.FloatTensor([1] * _) for _ in data_length]
     tokens_id = pad_sequence(tokens_id, batch_first=True, padding_value=PAD_ID).long()
-    tags = torch.transpose(pad_sequence(tags, batch_first=True, padding_value=LABEL_P).long(), 1, 2)
     seg = pad_sequence(seg, batch_first=True, padding_value=0).long()
-    #print(tags.shape)
-    return text, tokens, tokens_id[:, :max_length], tags[:, :, :max_length], seg[:, :max_length]
+
+    if model_type in ["baseline", "baseline-lstm"]:
+        tags = [torch.FloatTensor(b[3]).T for b in batch]
+        #print(tags[0].shape)
+        tags = torch.transpose(pad_sequence(tags, batch_first=True, padding_value=LABEL_P).long(), 1, 2)
+        #print(tags.shape)
+        return text, tokens, tokens_id[:, :max_length], seg[:, :max_length], tags[:, :, :max_length]
+    elif model_type == "hierarchical":
+        entities_head = [torch.FloatTensor(b[3]) for b in batch]
+        entities_tail = [torch.FloatTensor(b[4]) for b in batch]
+        entity_head = [b[5] for b in batch]
+        entity_tail = [b[6] for b in batch]
+        entity_roles = torch.LongTensor([b[7] for b in batch])
+        entities_head = pad_sequence(entities_head, batch_first=True, padding_value=0).long()
+        entities_tail = pad_sequence(entities_tail, batch_first=True, padding_value=0).long()
+        roles_list = [b[8] for b in batch]
+        return text, tokens, tokens_id[:, :max_length], seg[:, :max_length], entities_head[:, :max_length], \
+            entities_tail[:, :max_length], entity_head, entity_tail, entity_roles, roles_list
+    else:
+        print("Undefined mode_type!")
+        exit()
 
 if __name__ == "__main__":
     """ # Test for scheme dict
@@ -308,7 +455,7 @@ if __name__ == "__main__":
     args.vocab_path = vocabulary_path
     args.spm_model_path = None
 
-    event_dataset = EventDataset(args, TRAIN, 0, True)
+    """ event_dataset = EventDataset(args, TRAIN, 0, True)
     event_data_loader = DataLoader(event_dataset, batch_size=2, shuffle=False, collate_fn=collate_fn)
     for batch in event_data_loader:
         print(batch[0][0])
@@ -317,4 +464,12 @@ if __name__ == "__main__":
         for i in range(65):
             print(batch[3][0][i])
         print(batch[4][0])
+        break """
+
+    args.model_type = "hierarchical"
+    event_dataset = EventDataset(args, TEST, 0, True)
+    event_data_loader = DataLoader(event_dataset, batch_size=2, shuffle=False, collate_fn=lambda x: collate_fn(x, model_type=args.model_type))
+    for batch in event_data_loader:
+        for i in range(10):
+            print(batch[i][1])
         break

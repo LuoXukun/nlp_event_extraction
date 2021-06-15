@@ -42,3 +42,7 @@ power = 2
 """ Files """
 pretrained_model_path = os.path.join(uer_dir, "models/bert/event_bert_model.bin")
 config_path = os.path.join(uer_dir, "models/bert_base_config.json")
+
+""" For HierarchicalModel """
+entity_gate = 0.5
+role_gate = 0.5
