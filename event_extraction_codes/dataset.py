@@ -134,7 +134,8 @@ class EventDataset(Dataset):
         self.__preprocess_data__ = {
             "baseline": self.__preprocess_data_baseline__,
             "baseline_lstm": self.__preprocess_data_baseline__,
-            "hierarchical": self.__preprocess_data_hierarchical__
+            "hierarchical": self.__preprocess_data_hierarchical__,
+            "hierarchical-bias": self.__preprocess_data_hierarchical__
         }
         if not os.path.exists(self.preprocessed_data_path) or update is True:
             self.__preprocess_data__[self.model_type]()
@@ -142,7 +143,8 @@ class EventDataset(Dataset):
         self.__get_data__ = {
             "baseline": self.__get_data_baseline__,
             "baseline_lstm": self.__get_data_baseline__,
-            "hierarchical": self.__get_data_hierarchical__
+            "hierarchical": self.__get_data_hierarchical__,
+            "hierarchical-bias": self.__get_data_hierarchical__
         }
         self.__get_data__[self.model_type]()
     
@@ -368,11 +370,11 @@ class EventDataset(Dataset):
     def __getitem__(self, index):
         if "baseline" in self.model_type:
             return self.text[index], self.tokens[index], self.tokens_id[index], self.tags[index]
-        elif self.model_type == "hierarchical":
+        elif "hierarchical" in self.model_type:
             return self.text[index], self.tokens[index], self.tokens_id[index], self.entities_head[index], \
                 self.entities_tail[index], self.entity_head[index], self.entity_tail[index], self.entity_roles[index], self.roles_list[index]
         else:
-            print("Undefined mode_type!")
+            print("Undefined model type!")
             exit()
 
     def __len__(self):
@@ -420,7 +422,7 @@ def collate_fn(batch, max_len=512, model_type="baseline"):
         tags = torch.transpose(pad_sequence(tags, batch_first=True, padding_value=LABEL_P).long(), 1, 2)
         #print(tags.shape)
         return text, tokens, tokens_id[:, :max_length], seg[:, :max_length], tags[:, :, :max_length]
-    elif model_type == "hierarchical":
+    elif model_type in ["hierarchical", "hierarchical-bias"]:
         entities_head = [torch.FloatTensor(b[3]) for b in batch]
         entities_tail = [torch.FloatTensor(b[4]) for b in batch]
         entity_head = [b[5] for b in batch]
@@ -432,7 +434,7 @@ def collate_fn(batch, max_len=512, model_type="baseline"):
         return text, tokens, tokens_id[:, :max_length], seg[:, :max_length], entities_head[:, :max_length], \
             entities_tail[:, :max_length], entity_head, entity_tail, entity_roles, roles_list
     else:
-        print("Undefined mode_type!")
+        print("Undefined model type!")
         exit()
 
 if __name__ == "__main__":
@@ -467,9 +469,9 @@ if __name__ == "__main__":
         break """
 
     args.model_type = "hierarchical"
-    event_dataset = EventDataset(args, TEST, 0, True)
+    event_dataset = EventDataset(args, TRAIN, 0, True)
     event_data_loader = DataLoader(event_dataset, batch_size=2, shuffle=False, collate_fn=lambda x: collate_fn(x, model_type=args.model_type))
     for batch in event_data_loader:
-        for i in range(10):
+        for i in range(11):
             print(batch[i][1])
         break

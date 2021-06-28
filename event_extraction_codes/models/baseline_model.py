@@ -78,7 +78,7 @@ class BaselineModel(nn.Module):
         feats = torch.transpose(feats, 1, 2)
         return feats
     
-    def forward(self, batch):
+    def forward(self, batch, epoch):
         return self.__train__(batch)
 
     def test(self, batch):
@@ -91,7 +91,7 @@ class BaselineModel(nn.Module):
         seg = seg.to(self.device)
         return text, tokens, tokens_id, seg, tags
         
-    def get_loss(self, feats, batch):
+    def get_loss(self, feats, batch, epoch):
         """ 
             Args:
                 feats:              [batch_size x events_num x seq_length x role_tags_number]

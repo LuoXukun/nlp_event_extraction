@@ -10,5 +10,6 @@ from event_extraction_codes.models.hierarchical_model import HierarchicalModel
 ModelDict = {
     "baseline": BaselineModel,
     "baseline-lstm": BaselineModel,
-    "hierarchical": HierarchicalModel
+    "hierarchical": HierarchicalModel,
+    "hierarchical-bias": HierarchicalModel
 }

@@ -14,7 +14,7 @@ import json
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn import BCELoss
+from torch.nn import BCEWithLogitsLoss
 
 from uer.layers import *
 from uer.encoders import *
@@ -29,10 +29,11 @@ class HierarchicalModel(nn.Module):
         self.hidden_size = args.hidden_size
         self.entity_gate = args.entity_gate
         self.role_gate = args.role_gate
+        self.model_type = args.model_type
 
         self.embedding = str2embedding[args.embedding](args, len(args.tokenizer.vocab))
         self.encoder = str2encoder[args.encoder](args)
-        
+
         self.entities_head_output_layer = nn.Linear(self.hidden_size, 1)
         self.entities_tail_output_layer = nn.Linear(self.hidden_size, 1)
         self.sigmoid_layer = nn.Sigmoid()
@@ -41,31 +42,32 @@ class HierarchicalModel(nn.Module):
         self.criterion = self.__init_criterion__()
 
     def __init_criterion__(self):
-        return BCELoss(reduction="mean")
+        if "bias" not in self.model_type:
+            return BCEWithLogitsLoss(reduction="mean")
+        else:
+            return BCEWithLogitsLoss(reduction="mean", pos_weight=torch.Tensor([bias_weight]))
 
-    def forward(self, batch):
+    def forward(self, batch, epoch):
         """ 
             Args:   
-                batch:              [text, tokens, tokens_id, seg, entities_head, \
-                                    entities_tail, entity_head, entity_tail, entity_roles, roles_list]        
+                batch:              [text, tokens, tokens_id, seg, entities_head,
+                                    entities_tail, entity_head, entity_tail, entity_roles, roles_list, events_id]        
             returns:
                 feats:              (entities_head_feats, entities_tail_feats, role_feats)
         """
         # src:      tokens_id [batch_size x seq_length]
         # seg:      seg [batch_size x seq_length]
         src, seg = batch[2], batch[3]
-        entity_head, entity_tail = batch[6], batch[7]
+        entity_head, entity_tail, events_id = batch[6], batch[7], batch[10]
         batch_size, seq_len = src.size(0), src.size(1)
         # Embedding.
         emb = self.embedding(src, seg)
         # Encoder.
         hidden = self.encoder(emb, seg)
         # Entities head.
-        entities_head_output = self.entities_head_output_layer(hidden)
-        entities_head_output = self.sigmoid_layer(entities_head_output).view(batch_size, seq_len)
+        entities_head_output = self.entities_head_output_layer(hidden).view(batch_size, seq_len)
         # Entities tail.
-        entities_tail_output = self.entities_tail_output_layer(hidden)
-        entities_tail_output = self.sigmoid_layer(entities_tail_output).view(batch_size, seq_len)
+        entities_tail_output = self.entities_tail_output_layer(hidden).view(batch_size, seq_len)
         # Get the entity feature.
         batch_idxs = [_ for _ in range(batch_size)]
         head_feature = hidden[[batch_idxs, entity_head]]
@@ -73,8 +75,7 @@ class HierarchicalModel(nn.Module):
         entity_feature = (head_feature + tail_feature) * 0.5
         cls_hidden = hidden[:, 0, :] + entity_feature
         # Entities roles.
-        entity_roles_output = self.entity_roles_output_layer(cls_hidden)
-        entity_roles_output = self.sigmoid_layer(entity_roles_output).view(batch_size, self.events_num, self.max_role_len)
+        entity_roles_output = self.entity_roles_output_layer(cls_hidden).view(batch_size, self.events_num, self.max_role_len)
         return entities_head_output, entities_tail_output, entity_roles_output
     
     def test(self, batch):
@@ -85,10 +86,10 @@ class HierarchicalModel(nn.Module):
         # Encoder.
         hidden = self.encoder(emb, seg)
         # Entities head.
-        entities_head_output = self.entities_head_output_layer(hidden)
+        entities_head_output = self.entities_head_output_layer(hidden).view(batch_size, seq_len)
         entities_head_output = self.sigmoid_layer(entities_head_output)
         # Entities tail.
-        entities_tail_output = self.entities_tail_output_layer(hidden)
+        entities_tail_output = self.entities_tail_output_layer(hidden).view(batch_size, seq_len)
         entities_tail_output = self.sigmoid_layer(entities_tail_output)
         # Get heads and tails.
         roles_list = [set() for _ in range(batch_size)]
@@ -97,12 +98,12 @@ class HierarchicalModel(nn.Module):
             entity_tails = np.where(entities_tail_output[idx].cpu() > self.entity_gate)[0]
             entities = []
             for entity_head in entity_heads:
-                if entity_head == 0: continue                       # Ignore [CLS]
+                if entity_head == 0: continue                       # Ignore [CLS].
                 if entity_head > len(text[idx]): continue           # Ignore [PAD].
                 entity_tail = entity_tails[entity_tails >= entity_head]
                 if len(entity_tail) > 0:
                     entity_tail = entity_tail[0]
-                    if entity_tail > len(text[idx]): continue       # Ignore [PAD]
+                    if entity_tail > len(text[idx]): continue       # Ignore [PAD].
                     entities.append((entity_head, entity_tail))
             for pair in entities:
                 # Get the entity feature.
@@ -116,8 +117,7 @@ class HierarchicalModel(nn.Module):
                 for event_id, role_id in zip(event_ids, role_ids):
                     roles_list[idx].add((pair[0], pair[1], event_id, role_id))
         return roles_list
-
-    
+   
     def get_batch(self, batch):
         text, tokens, tokens_id, seg, entities_head, entities_tail, entity_head, entity_tail, entity_roles, roles_list = batch
         tokens_id = tokens_id.to(self.device)
@@ -127,12 +127,13 @@ class HierarchicalModel(nn.Module):
         entities_tail = entities_tail.to(self.device)
         return text, tokens, tokens_id, seg, entities_head, entities_tail, entity_head, entity_tail, entity_roles, roles_list
         
-    def get_loss(self, feats, batch):
+    def get_loss(self, feats, batch, epoch):
         """ 
             Args:
                 feats:              (entities_head_output, entities_tail_output, entity_roles_output)
                 batch:              [text, tokens, tokens_id, seg, entities_head, \
-                                    entities_tail, entity_head, entity_tail, entity_roles, roles_list]   
+                                    entities_tail, entity_head, entity_tail, entity_roles, roles_list]
+
             returns:
                 loss
         """
@@ -153,7 +154,12 @@ class HierarchicalModel(nn.Module):
         head_loss = self.criterion(head_feats.contiguous().view(-1), masked_gold_entities_head.contiguous().view(-1))
         tail_loss = self.criterion(tail_feats.contiguous().view(-1), masked_gold_entities_tail.contiguous().view(-1))
         role_loss = self.criterion(role_feats.contiguous().view(-1), gold_roles.contiguous().view(-1))
-        return head_loss + tail_loss + role_loss
+        if "bias" not in self.model_type:
+            return head_loss + tail_loss + role_loss
+        else:
+            seq_len = float(seg.size(1))        # Only estimating.
+            role_len = float(self.events_num * self.max_role_len)
+            return (role_len / seq_len) * (head_loss + tail_loss) + role_loss
 
     def evaluate(self, args, batch, roles_list, is_test, f_write=None):
         text, tokens, gold_roles_list = batch[0], batch[1], batch[9]

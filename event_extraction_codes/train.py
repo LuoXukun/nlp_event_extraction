@@ -70,7 +70,7 @@ def load_parameters():
 
     # Model options.
     parser.add_argument("--model_type", 
-        choices=["baseline", "baseline-lstm", "hierarchical"],
+        choices=["baseline", "baseline-lstm", "hierarchical", "hierarchical-bias"],
         default="baseline",
         help="What kind of model do you want to use.")
     parser.add_argument("--batch_size", type=int, default=batch_size,
@@ -276,9 +276,9 @@ def train_kfold(args):
 
                 device_batch = model.get_batch(batch)
 
-                feats = model(device_batch)
+                feats = model(device_batch, epoch)
 
-                loss = model.get_loss(feats, device_batch)
+                loss = model.get_loss(feats, device_batch, epoch)
                 if torch.cuda.device_count() > 1:
                     loss = torch.mean(loss)
 
