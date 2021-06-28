@@ -51,14 +51,14 @@ class HierarchicalModel(nn.Module):
         """ 
             Args:   
                 batch:              [text, tokens, tokens_id, seg, entities_head,
-                                    entities_tail, entity_head, entity_tail, entity_roles, roles_list, events_id]        
+                                    entities_tail, entity_head, entity_tail, entity_roles, roles_list]        
             returns:
                 feats:              (entities_head_feats, entities_tail_feats, role_feats)
         """
         # src:      tokens_id [batch_size x seq_length]
         # seg:      seg [batch_size x seq_length]
         src, seg = batch[2], batch[3]
-        entity_head, entity_tail, events_id = batch[6], batch[7], batch[10]
+        entity_head, entity_tail = batch[6], batch[7]
         batch_size, seq_len = src.size(0), src.size(1)
         # Embedding.
         emb = self.embedding(src, seg)

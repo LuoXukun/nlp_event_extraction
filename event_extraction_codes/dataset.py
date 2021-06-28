@@ -49,6 +49,7 @@ class SchemaDict():
         self.event_dict, self.event_list = {}, []
         self.__init_event__()
         self.__init_role__()
+        self.__init_event_role__()
         
     def __init_event__(self):
         with open(self.schema_path, "r", encoding="utf-8") as fr:
@@ -70,6 +71,14 @@ class SchemaDict():
                 for item in line:
                     self.role_dict[line_id][item["role"]] = len(self.role_list[line_id])
                     self.role_list[line_id].append(item["role"])
+
+    def __init_event_role__(self):
+        self.event_role_list, self.event_role_dict = [], {}
+        for idx, event in enumerate(self.event_list):
+            for role_type in self.role_list[idx]:
+                self.event_role_dict[str((event, role_type))] = len(self.event_role_list)
+                self.event_role_list.append(str((event, role_type)))
+        #print("event_role_list: {}\nevent_role_dict: {}".format(self.event_role_list, json.dumps(self.event_role_dict, ensure_ascii=False)))
     
     def get_event_id(self, event_type):
             return self.event_dict.get(event_type, None)
@@ -135,7 +144,9 @@ class EventDataset(Dataset):
             "baseline": self.__preprocess_data_baseline__,
             "baseline_lstm": self.__preprocess_data_baseline__,
             "hierarchical": self.__preprocess_data_hierarchical__,
-            "hierarchical-bias": self.__preprocess_data_hierarchical__
+            "hierarchical-bias": self.__preprocess_data_hierarchical__,
+            "cascade": self.__preprocess_data_cascade__,
+            "cascade-bias": self.__preprocess_data_cascade__,
         }
         if not os.path.exists(self.preprocessed_data_path) or update is True:
             self.__preprocess_data__[self.model_type]()
@@ -144,7 +155,9 @@ class EventDataset(Dataset):
             "baseline": self.__get_data_baseline__,
             "baseline_lstm": self.__get_data_baseline__,
             "hierarchical": self.__get_data_hierarchical__,
-            "hierarchical-bias": self.__get_data_hierarchical__
+            "hierarchical-bias": self.__get_data_hierarchical__,
+            "cascade": self.__get_data_cascade__,
+            "cascade-bias": self.__get_data_cascade__
         }
         self.__get_data__[self.model_type]()
     
@@ -367,12 +380,144 @@ class EventDataset(Dataset):
         #    len(self.entities_tail), len(self.entity_head), len(self.entity_tail), len(self.entity_roles), len(self.roles_list))
         self.length = len(self.text)
 
+    """ Cascade_Binary: Get the trigger and then the entities. """
+    def __preprocess_data_cascade__(self):
+        print("Cascade_Binary: Preprocessing dataset...")
+        check_file_path(self.preprocessed_data_path)
+        fw = open(self.preprocessed_data_path, "w", encoding="utf-8")
+
+        with open(self.origin_data_path, "r", encoding="utf-8") as fr:
+            for idx, line in enumerate(fr):
+                line = json.loads(line)
+                """ 
+                    {
+                        "text": "消失的“外企光环”，5月份在华裁员900余人，香饽饽变“臭”了", 
+                        "id": "cba11b5059495e635b4f95e7484b2684", 
+                        "event_list": [
+                            {
+                                "event_type": "组织关系-裁员", 
+                                "trigger": "裁员", 
+                                "trigger_start_index": 15, 
+                                "arguments": [
+                                    {"argument_start_index": 17, "role": "裁员人数", "argument": "900余人", "alias": []}, 
+                                    {"argument_start_index": 10, "role": "时间", "argument": "5月份", "alias": []}
+                                ], 
+                                "class": "组织关系"
+                            }
+                        ]
+                    } 
+                """
+                text, event_list = line["text"], line["event_list"]
+                tokens = self.tokenizer.tokenize(line["text"])
+                tokens_id = self.tokenizer.convert_tokens_to_ids(tokens)
+                text_len = len(text)
+
+                # Get the dict like {trigger_index: {"event_type": "", "arguments": {(start, end, event_role_id), ...}, ...}}
+                trigger_dict = {}
+                triggers_head, triggers_tail = [0 for i in range(text_len)], [0 for i in range(text_len)]
+                for event in event_list:
+                    event_type, arguments = event["event_type"], event["arguments"]
+                    trigger_start_index = int(event["trigger_start_index"])
+                    trigger_end_index = trigger_start_index + len(event["trigger"]) - 1
+                    triggers_head[trigger_start_index] = 1
+                    triggers_tail[trigger_end_index] = 1
+                    trigger_pair = str((trigger_start_index, trigger_end_index))
+                    if trigger_pair not in trigger_dict: 
+                        trigger_dict[trigger_pair] = {"event_type": event_type, "arguments": []}
+                    for argument in arguments:
+                        argument_start_index = int(argument["argument_start_index"])
+                        argument_end_index = argument_start_index + len(argument["argument"]) - 1
+                        role_type = argument["role"]
+                        event_role_id = self.schema_dict.event_role_dict[str((event_type, role_type))]
+                        trigger_dict[trigger_pair]["arguments"].append((argument_start_index, argument_end_index, event_role_id))
+                
+                # Generate the data.
+                preprocessed_sample = json.dumps({
+                    "text": text, "tokens": tokens, "tokens_id": tokens_id,
+                    "triggers_head": triggers_head, "triggers_tail": triggers_tail, "trigger_dict": trigger_dict
+                }, ensure_ascii=False)
+                fw.write(preprocessed_sample + "\n")
+        fw.close()
+
+    def __get_data_cascade__(self):
+        fr_pre = open(self.preprocessed_data_path, "r", encoding="utf-8")
+        data_lines = fr_pre.readlines()
+        data_len = len(data_lines)
+        state, k_fold, index = self.state, self.k_fold, self.index
+
+        if state == TRAIN:
+            if k_fold > 1:
+                self.data_lines = data_lines[:int((index % k_fold) * data_len / k_fold)] + \
+                                    data_lines[int((index % k_fold + 1) * data_len / k_fold):]
+            else:
+                self.data_lines = data_lines
+        elif state == VALID:
+            if k_fold > 1:
+                self.data_lines = data_lines[int((index % k_fold) * data_len / k_fold): \
+                                    int((index % k_fold + 1) * data_len / k_fold)]
+            else:
+                self.data_lines = []
+        else:
+            self.data_lines = data_lines
+
+        fr_pre.close()
+        self.text, self.tokens, self.tokens_id = [], [], []
+        self.triggers_head, self.triggers_tail, self.roles_list = [], [], []
+        self.trigger_head, self.trigger_tail, self.event_id = [], [], []
+        self.arguments_head, self.arguments_tail = [], []
+        for line in self.data_lines:
+            line = line.strip()
+            if line == "": continue
+            line = json.loads(line, encoding="utf-8")
+            # trigger_dict = {(trigger_start, trigger_end): {"event_type": "", "arguments": [(start, end, id), ...]}}
+            trigger_dict = line["trigger_dict"]
+            if state != TRAIN:
+                self.text.append(line["text"])
+                self.tokens.append(line["tokens"])
+                self.tokens_id.append(line["tokens_id"])
+                self.triggers_head.append(line["triggers_head"])
+                self.triggers_tail.append(line["triggers_tail"])
+                self.trigger_head.append(-1)        # Ignore it.
+                self.trigger_tail.append(-1)        # Ignore it.
+                self.event_id.append(-1)            # Ignore it.
+                self.arguments_head.append([[-1]])  # Ignore it.
+                self.arguments_tail.append([[-1]])  # Ignore it.
+                roles_list = set()
+                for key, value in trigger_dict.items():
+                    for triple in value["arguments"]:
+                        roles_list.add((triple[0], triple[1], triple[2]))
+                self.roles_list.append(roles_list)
+            else:
+                for key, value in trigger_dict.items():
+                    _key = eval(key)
+                    self.text.append(line["text"])
+                    self.tokens.append(line["tokens"])
+                    self.tokens_id.append(line["tokens_id"])
+                    self.triggers_head.append(line["triggers_head"])
+                    self.triggers_tail.append(line["triggers_tail"])
+                    self.roles_list.append(-1)      # Ignore it.
+                    self.trigger_head.append(_key[0])
+                    self.trigger_tail.append(_key[1])
+                    self.event_id.append(self.schema_dict.get_event_id(value["event_type"]))
+                    arguments_head = [[0 for i in range(len(line["tokens"]))] for j in range(len(self.schema_dict.event_role_list))]
+                    arguments_tail = [[0 for i in range(len(line["tokens"]))] for j in range(len(self.schema_dict.event_role_list))]
+                    for triple in value["arguments"]:
+                        arguments_head[triple[2]][triple[0]] = 1
+                        arguments_tail[triple[2]][triple[1]] = 1
+                    self.arguments_head.append(arguments_head)
+                    self.arguments_tail.append(arguments_tail)
+        self.length = len(self.text)
+
     def __getitem__(self, index):
         if "baseline" in self.model_type:
             return self.text[index], self.tokens[index], self.tokens_id[index], self.tags[index]
         elif "hierarchical" in self.model_type:
             return self.text[index], self.tokens[index], self.tokens_id[index], self.entities_head[index], \
                 self.entities_tail[index], self.entity_head[index], self.entity_tail[index], self.entity_roles[index], self.roles_list[index]
+        elif "cascade" in self.model_type:
+            return self.text[index], self.tokens[index], self.tokens_id[index], self.triggers_head[index], \
+                self.triggers_tail[index], self.trigger_head[index], self.trigger_tail[index], self.arguments_head[index], \
+                self.arguments_tail[index], self.event_id[index], self.roles_list[index]
         else:
             print("Undefined model type!")
             exit()
@@ -433,6 +578,27 @@ def collate_fn(batch, max_len=512, model_type="baseline"):
         roles_list = [b[8] for b in batch]
         return text, tokens, tokens_id[:, :max_length], seg[:, :max_length], entities_head[:, :max_length], \
             entities_tail[:, :max_length], entity_head, entity_tail, entity_roles, roles_list
+    elif model_type in ["cascade", "cascade-bias"]:
+        triggers_head = [torch.FloatTensor(b[3]) for b in batch]
+        triggers_tail = [torch.FloatTensor(b[4]) for b in batch]
+        trigger_head = [b[5] for b in batch]
+        trigger_tail = [b[6] for b in batch]
+        arguments_head = [torch.FloatTensor(c) for b in batch for c in b[7]]
+        #print("length for arguemnts head: ", len(arguments_head))
+        #print(arguments_head)
+        arguments_tail = [torch.FloatTensor(c) for b in batch for c in b[8]]
+        event_id = torch.LongTensor([b[9] for b in batch])
+        roles_list = [b[10] for b in batch]
+        triggers_head = pad_sequence(triggers_head, batch_first=True, padding_value=0).long()
+        triggers_tail = pad_sequence(triggers_tail, batch_first=True, padding_value=0).long()
+        batch_size = triggers_head.size(0)
+        assert len(arguments_head) % batch_size == 0
+        event_role_len = len(arguments_head) // batch_size
+        arguments_head = pad_sequence(arguments_head, batch_first=True, padding_value=0).long().view(batch_size, event_role_len, -1)
+        arguments_tail = pad_sequence(arguments_tail, batch_first=True, padding_value=0).long().view(batch_size, event_role_len, -1)
+        return text, tokens, tokens_id[:, :max_length], seg[:, :max_length], triggers_head[:, :max_length], \
+                triggers_tail[:, :max_length], trigger_head, trigger_tail, arguments_head[:, :, :max_length], \
+                arguments_tail[:, :, :max_length], event_id, roles_list
     else:
         print("Undefined model type!")
         exit()
@@ -468,10 +634,20 @@ if __name__ == "__main__":
         print(batch[4][0])
         break """
 
-    args.model_type = "hierarchical"
+    """ args.model_type = "hierarchical"
     event_dataset = EventDataset(args, TRAIN, 0, True)
     event_data_loader = DataLoader(event_dataset, batch_size=2, shuffle=False, collate_fn=lambda x: collate_fn(x, model_type=args.model_type))
     for batch in event_data_loader:
         for i in range(11):
             print(batch[i][1])
+        break """
+    
+    args.model_type = "cascade"
+    event_dataset = EventDataset(args, TRAIN, 0, True)
+    event_data_loader = DataLoader(event_dataset, batch_size=2, shuffle=False, collate_fn=lambda x: collate_fn(x, model_type=args.model_type))
+    for batch in event_data_loader:
+        for i in range(12):
+            print(batch[i][1])
+            if i == 8 or i == 9:
+                print(np.where(batch[i][1] > 0.5))
         break

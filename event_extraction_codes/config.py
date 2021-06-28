@@ -46,4 +46,4 @@ config_path = os.path.join(uer_dir, "models/bert_base_config.json")
 """ For HierarchicalModel """
 entity_gate = 0.5
 role_gate = 0.5
-bias_weight = 10.0
+bias_weight = 100.0

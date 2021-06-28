@@ -70,7 +70,7 @@ def load_parameters():
 
     # Model options.
     parser.add_argument("--model_type", 
-        choices=["baseline", "baseline-lstm", "hierarchical", "hierarchical-bias"],
+        choices=["baseline", "baseline-lstm", "hierarchical", "hierarchical-bias", "cascade", "cascade-bias"],
         default="baseline",
         help="What kind of model do you want to use.")
     parser.add_argument("--batch_size", type=int, default=batch_size,
