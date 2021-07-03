@@ -43,9 +43,9 @@ class CascadeModel(nn.Module):
 
     def __init_criterion__(self):
         if "bias" not in self.model_type:
-            return BCEWithLogitsLoss(reduction="mean")
+            return BCEWithLogitsLoss(reduction="none")
         else:
-            return BCEWithLogitsLoss(reduction="mean", pos_weight=torch.Tensor([bias_weight]))
+            return BCEWithLogitsLoss(reduction="none", pos_weight=torch.Tensor([bias_weight]))
 
     def forward(self, batch, epoch):
         """ 
@@ -156,7 +156,19 @@ class CascadeModel(nn.Module):
         gold_arguments_head, gold_arguments_tail = batch[8], batch[9]
         assert seg.shape == gold_triggers_head.shape
         batch_size, seq_len = seg.size(0), seg.size(1)
-        # Mask the padding tags for gold.
+
+        gold_feats = [gold_triggers_head, gold_triggers_tail, gold_arguments_head, gold_arguments_tail]
+        total_loss = 0
+        for idx in range(4):
+            loss = self.criterion(feats[idx].float().contiguous().view(-1), gold_feats[idx].float().contiguous().view(-1))
+            if idx < 2:
+                total_loss += torch.sum(loss.view(batch_size, seq_len) * seg) / torch.sum(seg)
+            else:
+                loss = torch.sum(loss.view(batch_size, -1, seq_len), dim=1)
+                total_loss += torch.sum(loss * seg) / torch.sum(seg)
+        return total_loss
+
+        """ # Mask the padding tags for gold.
         #print(gold_triggers_head.shape, seg.shape, gold_arguments_head.shape)
         masked_gold_triggers_head = torch.mul(gold_triggers_head, seg).float()
         masked_gold_triggers_tail = torch.mul(gold_triggers_tail, seg).float()
@@ -177,7 +189,7 @@ class CascadeModel(nn.Module):
         for idx in range(4):
             loss += self.criterion(masked_pred_feats[idx].contiguous().view(-1), masked_gold_feats[idx].contiguous().view(-1))
 
-        return loss
+        return loss """
 
     def evaluate(self, args, batch, roles_list, is_test, f_write=None):
         text, tokens, gold_roles_list = batch[0], batch[1], batch[11]
