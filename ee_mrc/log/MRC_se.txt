@@ -1,0 +1,51 @@
+MRC SE, using all training data.
+2021-07-01 07:07:01
+train_size=42451, test_size=5607
+
+=== Start training epoch 0 ===
+[number correct=2406 predict=3268 golden=3498]
+train loss=0.0127 test loss=0.0057 p=0.7362 r=0.6878 f1=0.7112
+
+=== Start training epoch 1 ===
+[number correct=2569 predict=3509 golden=3498]
+train loss=0.0051 test loss=0.0054 p=0.7321 r=0.7344 f1=0.7333
+
+=== Start training epoch 2 ===
+[number correct=2704 predict=3787 golden=3498]
+train loss=0.0037 test loss=0.0060 p=0.7140 r=0.7730 f1=0.7423
+
+=== Start training epoch 3 ===
+[number correct=2662 predict=3698 golden=3498]
+train loss=0.0028 test loss=0.0063 p=0.7198 r=0.7610 f1=0.7399
+
+=== Start training epoch 4 ===
+[number correct=2706 predict=3781 golden=3498]
+train loss=0.0021 test loss=0.0070 p=0.7157 r=0.7736 f1=0.7435
+
+=== Start training epoch 5 ===
+[number correct=2652 predict=3700 golden=3498]
+train loss=0.0016 test loss=0.0079 p=0.7168 r=0.7581 f1=0.7369
+
+=== Start training epoch 6 ===
+[number correct=2600 predict=3521 golden=3498]
+train loss=0.0012 test loss=0.0076 p=0.7384 r=0.7433 f1=0.7408
+
+=== Start training epoch 7 ===
+[number correct=2636 predict=3596 golden=3498]
+train loss=0.0009 test loss=0.0089 p=0.7330 r=0.7536 f1=0.7432
+
+=== Start training epoch 8 ===
+[number correct=2646 predict=3597 golden=3498]
+train loss=0.0007 test loss=0.0092 p=0.7356 r=0.7564 f1=0.7459
+
+=== Start training epoch 9 ===
+[number correct=2658 predict=3639 golden=3498]
+train loss=0.0005 test loss=0.0097 p=0.7304 r=0.7599 f1=0.7449
+
+Total took 0:57:43 (h:mm:ss)
+
+Finished! 2021-07-01 08:04:47
+Final best results---
+[number correct=2646 predict=3597 golden=3498]
+Test result saved in ../output/mrc_se.csv
+p=0.7356 r=0.7564 f1=0.7459

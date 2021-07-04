@@ -1,0 +1,319 @@
+Train for predicting event type.
+
+Number of event types:  66 
+
+There are 1498 sentences in ../input/test_event_type.json.
+
+There are 11958 sentences in ../input/train_event_type.json.
+
+K-fold 1
+Epoch 0 train loss 0.22677914448157202
+correct 2407 prediction 2701 golden 2624
+valid p=0.8912 r=0.9173 f1=0.9040
+correct 1508 prediction 1680 golden 1657
+test p=0.8976 r=0.9101 f1=0.9038
+
+Epoch 1 train loss 0.04420024556198148
+correct 2488 prediction 2662 golden 2624
+valid p=0.9346 r=0.9482 f1=0.9414
+correct 1549 prediction 1664 golden 1657
+test p=0.9309 r=0.9348 f1=0.9329
+
+Epoch 2 train loss 0.027013227004047024
+correct 2536 prediction 2716 golden 2624
+valid p=0.9337 r=0.9665 f1=0.9498
+correct 1590 prediction 1716 golden 1657
+test p=0.9266 r=0.9596 f1=0.9428
+
+Epoch 3 train loss 0.01857014567930762
+correct 2544 prediction 2702 golden 2624
+valid p=0.9415 r=0.9695 f1=0.9553
+correct 1596 prediction 1715 golden 1657
+test p=0.9306 r=0.9632 f1=0.9466
+
+Epoch 4 train loss 0.013488526611018889
+correct 2506 prediction 2632 golden 2624
+valid p=0.9521 r=0.9550 f1=0.9536
+correct 1566 prediction 1657 golden 1657
+test p=0.9451 r=0.9451 f1=0.9451
+
+Epoch 5 train loss 0.009955507642387049
+correct 2514 prediction 2650 golden 2624
+valid p=0.9487 r=0.9581 f1=0.9534
+correct 1584 prediction 1676 golden 1657
+test p=0.9451 r=0.9559 f1=0.9505
+
+Epoch 6 train loss 0.007277421088325464
+correct 2484 prediction 2595 golden 2624
+valid p=0.9572 r=0.9466 f1=0.9519
+correct 1552 prediction 1636 golden 1657
+test p=0.9487 r=0.9366 f1=0.9426
+
+Epoch 7 train loss 0.005899494448069321
+correct 2522 prediction 2658 golden 2624
+valid p=0.9488 r=0.9611 f1=0.9549
+correct 1575 prediction 1668 golden 1657
+test p=0.9442 r=0.9505 f1=0.9474
+
+Epoch 8 train loss 0.004462553382295193
+correct 2522 prediction 2670 golden 2624
+valid p=0.9446 r=0.9611 f1=0.9528
+correct 1586 prediction 1679 golden 1657
+test p=0.9446 r=0.9572 f1=0.9508
+
+Epoch 9 train loss 0.0036483567778837172
+correct 2533 prediction 2678 golden 2624
+valid p=0.9459 r=0.9653 f1=0.9555
+correct 1587 prediction 1680 golden 1657
+test p=0.9446 r=0.9578 f1=0.9512
+
+K-fold 2
+Epoch 0 train loss 0.1887585980736691
+correct 2399 prediction 2702 golden 2633
+valid p=0.8879 r=0.9111 f1=0.8993
+correct 1518 prediction 1699 golden 1657
+test p=0.8935 r=0.9161 f1=0.9046
+
+Epoch 1 train loss 0.039573172316029914
+correct 2474 prediction 2657 golden 2633
+valid p=0.9311 r=0.9396 f1=0.9353
+correct 1568 prediction 1671 golden 1657
+test p=0.9384 r=0.9463 f1=0.9423
+
+Epoch 2 train loss 0.024346535712368413
+correct 2524 prediction 2729 golden 2633
+valid p=0.9249 r=0.9586 f1=0.9414
+correct 1584 prediction 1701 golden 1657
+test p=0.9312 r=0.9559 f1=0.9434
+
+Epoch 3 train loss 0.016746204861916327
+correct 2540 prediction 2757 golden 2633
+valid p=0.9213 r=0.9647 f1=0.9425
+correct 1593 prediction 1727 golden 1657
+test p=0.9224 r=0.9614 f1=0.9415
+
+Epoch 4 train loss 0.011746364982057375
+correct 2537 prediction 2741 golden 2633
+valid p=0.9256 r=0.9635 f1=0.9442
+correct 1601 prediction 1715 golden 1657
+test p=0.9335 r=0.9662 f1=0.9496
+
+Epoch 5 train loss 0.008825612399667926
+correct 2521 prediction 2693 golden 2633
+valid p=0.9361 r=0.9575 f1=0.9467
+correct 1592 prediction 1699 golden 1657
+test p=0.9370 r=0.9608 f1=0.9487
+
+Epoch 6 train loss 0.006225487281939009
+correct 2502 prediction 2668 golden 2633
+valid p=0.9378 r=0.9502 f1=0.9440
+correct 1586 prediction 1681 golden 1657
+test p=0.9435 r=0.9572 f1=0.9503
+
+Epoch 7 train loss 0.00467319715589777
+correct 2505 prediction 2666 golden 2633
+valid p=0.9396 r=0.9514 f1=0.9455
+correct 1583 prediction 1681 golden 1657
+test p=0.9417 r=0.9553 f1=0.9485
+
+Epoch 8 train loss 0.0038306880535956558
+correct 2511 prediction 2684 golden 2633
+valid p=0.9355 r=0.9537 f1=0.9445
+correct 1583 prediction 1687 golden 1657
+test p=0.9384 r=0.9553 f1=0.9468
+
+Epoch 9 train loss 0.0029593033941515585
+correct 2516 prediction 2689 golden 2633
+valid p=0.9357 r=0.9556 f1=0.9455
+correct 1585 prediction 1684 golden 1657
+test p=0.9412 r=0.9565 f1=0.9488
+
+K-fold 3
+Epoch 0 train loss 0.2027740764827234
+correct 2485 prediction 2761 golden 2656
+valid p=0.9000 r=0.9356 f1=0.9175
+correct 1545 prediction 1729 golden 1657
+test p=0.8936 r=0.9324 f1=0.9126
+
+Epoch 1 train loss 0.04009748403493776
+correct 2546 prediction 2733 golden 2656
+valid p=0.9316 r=0.9586 f1=0.9449
+correct 1591 prediction 1718 golden 1657
+test p=0.9261 r=0.9602 f1=0.9428
+
+Epoch 2 train loss 0.02447505928825176
+correct 2533 prediction 2685 golden 2656
+valid p=0.9434 r=0.9537 f1=0.9485
+correct 1577 prediction 1698 golden 1657
+test p=0.9287 r=0.9517 f1=0.9401
+
+Epoch 3 train loss 0.016987341615748296
+correct 2558 prediction 2730 golden 2656
+valid p=0.9370 r=0.9631 f1=0.9499
+correct 1592 prediction 1715 golden 1657
+test p=0.9283 r=0.9608 f1=0.9442
+
+Epoch 4 train loss 0.012192990501601261
+correct 2557 prediction 2715 golden 2656
+valid p=0.9418 r=0.9627 f1=0.9522
+correct 1593 prediction 1701 golden 1657
+test p=0.9365 r=0.9614 f1=0.9488
+
+Epoch 5 train loss 0.00901065508867723
+correct 2554 prediction 2695 golden 2656
+valid p=0.9477 r=0.9616 f1=0.9546
+correct 1588 prediction 1694 golden 1657
+test p=0.9374 r=0.9584 f1=0.9478
+
+Epoch 6 train loss 0.006775147029289035
+correct 2540 prediction 2680 golden 2656
+valid p=0.9478 r=0.9563 f1=0.9520
+correct 1584 prediction 1682 golden 1657
+test p=0.9417 r=0.9559 f1=0.9488
+
+Epoch 7 train loss 0.004931004361302458
+correct 2532 prediction 2661 golden 2656
+valid p=0.9515 r=0.9533 f1=0.9524
+correct 1585 prediction 1677 golden 1657
+test p=0.9451 r=0.9565 f1=0.9508
+
+Epoch 8 train loss 0.003600233655935309
+correct 2540 prediction 2675 golden 2656
+valid p=0.9495 r=0.9563 f1=0.9529
+correct 1586 prediction 1680 golden 1657
+test p=0.9440 r=0.9572 f1=0.9506
+
+Epoch 9 train loss 0.0030445045109037745
+correct 2541 prediction 2675 golden 2656
+valid p=0.9499 r=0.9567 f1=0.9533
+correct 1591 prediction 1685 golden 1657
+test p=0.9442 r=0.9602 f1=0.9521
+
+K-fold 4
+Epoch 0 train loss 0.1992798767186527
+correct 2389 prediction 2663 golden 2611
+valid p=0.8971 r=0.9150 f1=0.9060
+correct 1525 prediction 1696 golden 1657
+test p=0.8992 r=0.9203 f1=0.9096
+
+Epoch 1 train loss 0.04258525852475278
+correct 2464 prediction 2620 golden 2611
+valid p=0.9405 r=0.9437 f1=0.9421
+correct 1570 prediction 1680 golden 1657
+test p=0.9345 r=0.9475 f1=0.9410
+
+Epoch 2 train loss 0.025528139369344234
+correct 2495 prediction 2648 golden 2611
+valid p=0.9422 r=0.9556 f1=0.9488
+correct 1570 prediction 1678 golden 1657
+test p=0.9356 r=0.9475 f1=0.9415
+
+Epoch 3 train loss 0.01739037174102305
+correct 2528 prediction 2712 golden 2611
+valid p=0.9322 r=0.9682 f1=0.9498
+correct 1603 prediction 1731 golden 1657
+test p=0.9261 r=0.9674 f1=0.9463
+
+Epoch 4 train loss 0.01244823101839443
+correct 2493 prediction 2645 golden 2611
+valid p=0.9425 r=0.9548 f1=0.9486
+correct 1584 prediction 1685 golden 1657
+test p=0.9401 r=0.9559 f1=0.9479
+
+Epoch 5 train loss 0.00935738061338252
+correct 2480 prediction 2615 golden 2611
+valid p=0.9484 r=0.9498 f1=0.9491
+correct 1567 prediction 1655 golden 1657
+test p=0.9468 r=0.9457 f1=0.9463
+
+Epoch 6 train loss 0.006830772406804721
+correct 2504 prediction 2652 golden 2611
+valid p=0.9442 r=0.9590 f1=0.9515
+correct 1590 prediction 1688 golden 1657
+test p=0.9419 r=0.9596 f1=0.9507
+
+Epoch 7 train loss 0.005349998302402654
+correct 2491 prediction 2628 golden 2611
+valid p=0.9479 r=0.9540 f1=0.9509
+correct 1581 prediction 1674 golden 1657
+test p=0.9444 r=0.9541 f1=0.9493
+
+Epoch 8 train loss 0.003901102230494786
+correct 2501 prediction 2645 golden 2611
+valid p=0.9456 r=0.9579 f1=0.9517
+correct 1582 prediction 1684 golden 1657
+test p=0.9394 r=0.9547 f1=0.9470
+
+Epoch 9 train loss 0.003360196217632912
+correct 2501 prediction 2645 golden 2611
+valid p=0.9456 r=0.9579 f1=0.9517
+correct 1590 prediction 1694 golden 1657
+test p=0.9386 r=0.9596 f1=0.9490
+
+K-fold 5
+Epoch 0 train loss 0.19967896367943405
+correct 2452 prediction 2715 golden 2635
+valid p=0.9031 r=0.9306 f1=0.9166
+correct 1541 prediction 1713 golden 1657
+test p=0.8996 r=0.9300 f1=0.9145
+
+Epoch 1 train loss 0.04057670160380494
+correct 2493 prediction 2664 golden 2635
+valid p=0.9358 r=0.9461 f1=0.9409
+correct 1555 prediction 1669 golden 1657
+test p=0.9317 r=0.9384 f1=0.9351
+
+Epoch 2 train loss 0.025140730707741102
+correct 2553 prediction 2734 golden 2635
+valid p=0.9338 r=0.9689 f1=0.9510
+correct 1592 prediction 1719 golden 1657
+test p=0.9261 r=0.9608 f1=0.9431
+
+Epoch 3 train loss 0.017640074218209074
+correct 2565 prediction 2774 golden 2635
+valid p=0.9247 r=0.9734 f1=0.9484
+correct 1599 prediction 1746 golden 1657
+test p=0.9158 r=0.9650 f1=0.9398
+
+Epoch 4 train loss 0.012609772796876554
+correct 2544 prediction 2714 golden 2635
+valid p=0.9374 r=0.9655 f1=0.9512
+correct 1585 prediction 1700 golden 1657
+test p=0.9324 r=0.9565 f1=0.9443
+
+Epoch 5 train loss 0.00941219858912421
+correct 2535 prediction 2692 golden 2635
+valid p=0.9417 r=0.9620 f1=0.9518
+correct 1576 prediction 1679 golden 1657
+test p=0.9387 r=0.9511 f1=0.9448
+
+Epoch 6 train loss 0.00682401585152815
+correct 2524 prediction 2676 golden 2635
+valid p=0.9432 r=0.9579 f1=0.9505
+correct 1571 prediction 1668 golden 1657
+test p=0.9418 r=0.9481 f1=0.9450
+
+Epoch 7 train loss 0.005018581214585158
+correct 2525 prediction 2670 golden 2635
+valid p=0.9457 r=0.9583 f1=0.9519
+correct 1574 prediction 1668 golden 1657
+test p=0.9436 r=0.9499 f1=0.9468
+
+Epoch 8 train loss 0.004120722226370251
+correct 2522 prediction 2674 golden 2635
+valid p=0.9432 r=0.9571 f1=0.9501
+correct 1572 prediction 1669 golden 1657
+test p=0.9419 r=0.9487 f1=0.9453
+
+Epoch 9 train loss 0.003197261304489452
+correct 2534 prediction 2690 golden 2635
+valid p=0.9420 r=0.9617 f1=0.9517
+correct 1578 prediction 1682 golden 1657
+test p=0.9382 r=0.9523 f1=0.9452
+
+Metrics of each fold
+precision - [0.9458551157580284, 0.9361307092461938, 0.9476808905380334, 0.9455576559546314, 0.9456928838951311]
+recall - [0.9653201219512195, 0.9574629699962021, 0.9615963855421686, 0.9578705476828802, 0.9582542694497154]
+f1 - [0.955488494907582, 0.9466766804355989, 0.9545879274901887, 0.9516742770167428, 0.9519321394910462]
+Avg metrcis: p=0.9441834510784035 r=0.9601008589244371 f1=0.9520719038682317
+
