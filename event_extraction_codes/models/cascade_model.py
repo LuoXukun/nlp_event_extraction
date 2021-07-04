@@ -159,14 +159,28 @@ class CascadeModel(nn.Module):
 
         gold_feats = [gold_triggers_head, gold_triggers_tail, gold_arguments_head, gold_arguments_tail]
         total_loss = 0
-        for idx in range(4):
-            loss = self.criterion(feats[idx].float().contiguous().view(-1), gold_feats[idx].float().contiguous().view(-1))
-            if idx < 2:
-                total_loss += torch.sum(loss.view(batch_size, seq_len) * seg) / torch.sum(seg)
-            else:
-                loss = torch.sum(loss.view(batch_size, -1, seq_len), dim=1)
-                total_loss += torch.sum(loss * seg) / torch.sum(seg)
-        return total_loss
+        if "sample" in self.model_type:
+            for idx in range(4):
+                gold_mask = (gold_feats[idx] > 0.5).float().view(-1)
+                negative_rand_sample_array = np.arange(gold_mask.shape[0])
+                np.random.shuffle(negative_rand_sample_array)
+                # neg_samples_weight times of positive samples at most.
+                negative_samples_max_num = int(neg_samples_weight * torch.sum(gold_mask))
+                gold_mask[negative_rand_sample_array[0:negative_samples_max_num]] = torch.ones(negative_samples_max_num).to(self.device)
+                #print(gold_mask[negative_rand_sample_array[0:negative_samples_max_num]])
+                gold_mask = gold_mask.view(batch_size, -1, seq_len) * seg.view(batch_size, -1, seq_len)
+                loss = self.criterion(feats[idx].float().contiguous().view(-1), gold_feats[idx].float().contiguous().view(-1))
+                total_loss += torch.sum(loss.view(batch_size, -1, seq_len) * gold_mask) / torch.sum(gold_mask)
+            return total_loss
+        else:
+            for idx in range(4):
+                loss = self.criterion(feats[idx].float().contiguous().view(-1), gold_feats[idx].float().contiguous().view(-1))
+                if idx < 2:
+                    total_loss += torch.sum(loss.view(batch_size, seq_len) * seg) / torch.sum(seg)
+                else:
+                    loss = torch.sum(loss.view(batch_size, -1, seq_len), dim=1)
+                    total_loss += torch.sum(loss * seg) / torch.sum(seg)
+            return total_loss
 
         """ # Mask the padding tags for gold.
         #print(gold_triggers_head.shape, seg.shape, gold_arguments_head.shape)

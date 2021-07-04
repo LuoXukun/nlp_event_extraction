@@ -47,3 +47,6 @@ config_path = os.path.join(uer_dir, "models/bert_base_config.json")
 entity_gate = 0.5
 role_gate = 0.5
 bias_weight = 100.0
+
+""" For Cascade sampling. """
+neg_samples_weight = 5

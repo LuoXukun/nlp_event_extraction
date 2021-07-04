@@ -147,6 +147,7 @@ class EventDataset(Dataset):
             "hierarchical-bias": self.__preprocess_data_hierarchical__,
             "cascade": self.__preprocess_data_cascade__,
             "cascade-bias": self.__preprocess_data_cascade__,
+            "cascade-sample": self.__preprocess_data_cascade__
         }
         if not os.path.exists(self.preprocessed_data_path) or update is True:
             self.__preprocess_data__[self.model_type]()
@@ -157,7 +158,8 @@ class EventDataset(Dataset):
             "hierarchical": self.__get_data_hierarchical__,
             "hierarchical-bias": self.__get_data_hierarchical__,
             "cascade": self.__get_data_cascade__,
-            "cascade-bias": self.__get_data_cascade__
+            "cascade-bias": self.__get_data_cascade__,
+            "cascade-sample": self.__get_data_cascade__
         }
         self.__get_data__[self.model_type]()
     
@@ -578,7 +580,7 @@ def collate_fn(batch, max_len=512, model_type="baseline"):
         roles_list = [b[8] for b in batch]
         return text, tokens, tokens_id[:, :max_length], seg[:, :max_length], entities_head[:, :max_length], \
             entities_tail[:, :max_length], entity_head, entity_tail, entity_roles, roles_list
-    elif model_type in ["cascade", "cascade-bias"]:
+    elif model_type in ["cascade", "cascade-bias", "cascade-sample"]:
         triggers_head = [torch.FloatTensor(b[3]) for b in batch]
         triggers_tail = [torch.FloatTensor(b[4]) for b in batch]
         trigger_head = [b[5] for b in batch]

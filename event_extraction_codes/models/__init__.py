@@ -14,5 +14,6 @@ ModelDict = {
     "hierarchical": HierarchicalModel,
     "hierarchical-bias": HierarchicalModel,
     "cascade": CascadeModel,
-    "cascade-bias": CascadeModel
+    "cascade-bias": CascadeModel,
+    "cascade-sample": CascadeModel
 }
