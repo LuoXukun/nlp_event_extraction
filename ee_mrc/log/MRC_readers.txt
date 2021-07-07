@@ -1,0 +1,152 @@
+2021-06-27 18:09:54
+Training k-folds data saved in ../output/train_mrc_folds.csv, total size 42451.
+This is k-fold cross validation.
+To extract argument.
+We will use the GPU: RTX A6000
+
+Using existed train data, do intensive reader.
+
+=== Start training fold 0 ===
+train_size=33957, valid_size=8494
+
+[number correct=4 predict=9 golden=5583]
+Fold 0 Epoch 1 Train loss=0.6219 Valid loss=0.3595 acc=0.8774 f1=0.0014 p=0.4444 r=0.0007
+
+[number correct=1843 predict=3025 golden=5583]
+Fold 0 Epoch 2 Train loss=0.3217 Valid loss=0.2861 acc=0.9042 f1=0.4282 p=0.6093 r=0.3301
+
+[number correct=2576 predict=4036 golden=5583]
+Fold 0 Epoch 3 Train loss=0.2530 Valid loss=0.2603 acc=0.9088 f1=0.5356 p=0.6383 r=0.4614
+
+[number correct=2994 predict=4783 golden=5583]
+Fold 0 Epoch 4 Train loss=0.2081 Valid loss=0.2580 acc=0.9151 f1=0.5777 p=0.6260 r=0.5363
+
+[number correct=3110 predict=4988 golden=5583]
+Fold 0 Epoch 5 Train loss=0.1721 Valid loss=0.2696 acc=0.9164 f1=0.5884 p=0.6235 r=0.5570
+
+Fold 0 took 0:18:54 (h:mm:ss)
+
+=== Start predicting fold 0 ===
+[number correct=1890 predict=3240 golden=3498]
+Test result saved in ../output/fold_0_intensive_result.csv
+Fold 0 Test loss=0.4153 acc=0.8855 f1=0.5610 p=0.5833 r=0.5403
+
+
+=== Start training fold 1 ===
+train_size=33959, valid_size=8492
+
+[number correct=2984 predict=4215 golden=5568]
+Fold 1 Epoch 1 Train loss=0.2141 Valid loss=0.1769 acc=0.9418 f1=0.6100 p=0.7079 r=0.5359
+
+[number correct=3331 predict=4743 golden=5568]
+Fold 1 Epoch 2 Train loss=0.1806 Valid loss=0.1793 acc=0.9425 f1=0.6461 p=0.7023 r=0.5982
+
+[number correct=3373 predict=4815 golden=5568]
+Fold 1 Epoch 3 Train loss=0.1320 Valid loss=0.1969 acc=0.9410 f1=0.6497 p=0.7005 r=0.6058
+
+[number correct=3484 predict=4981 golden=5568]
+Fold 1 Epoch 4 Train loss=0.0941 Valid loss=0.2061 acc=0.9430 f1=0.6605 p=0.6995 r=0.6257
+
+[number correct=3531 predict=5076 golden=5568]
+Fold 1 Epoch 5 Train loss=0.0674 Valid loss=0.2363 acc=0.9445 f1=0.6635 p=0.6956 r=0.6342
+
+Fold 1 took 0:18:55 (h:mm:ss)
+
+=== Start predicting fold 1 ===
+[number correct=2158 predict=3319 golden=3498]
+Test result saved in ../output/fold_1_intensive_result.csv
+Fold 1 Test loss=0.5991 acc=0.8876 f1=0.6331 p=0.6502 r=0.6169
+
+
+=== Start training fold 2 ===
+train_size=33961, valid_size=8490
+
+[number correct=3800 predict=5490 golden=5639]
+Fold 2 Epoch 1 Train loss=0.1265 Valid loss=0.0912 acc=0.9743 f1=0.6829 p=0.6922 r=0.6739
+
+[number correct=3721 predict=5328 golden=5639]
+Fold 2 Epoch 2 Train loss=0.1042 Valid loss=0.0844 acc=0.9762 f1=0.6786 p=0.6984 r=0.6599
+
+[number correct=3780 predict=5226 golden=5639]
+Fold 2 Epoch 3 Train loss=0.0748 Valid loss=0.0949 acc=0.9736 f1=0.6958 p=0.7233 r=0.6703
+
+[number correct=3754 predict=5060 golden=5639]
+Fold 2 Epoch 4 Train loss=0.0523 Valid loss=0.0920 acc=0.9759 f1=0.7017 p=0.7419 r=0.6657
+
+[number correct=3805 predict=5201 golden=5639]
+Fold 2 Epoch 5 Train loss=0.0386 Valid loss=0.0998 acc=0.9775 f1=0.7020 p=0.7316 r=0.6748
+
+Fold 2 took 0:18:51 (h:mm:ss)
+
+=== Start predicting fold 2 ===
+[number correct=2251 predict=3276 golden=3498]
+Test result saved in ../output/fold_2_intensive_result.csv
+Fold 2 Test loss=0.6746 acc=0.8907 f1=0.6646 p=0.6871 r=0.6435
+
+
+=== Start training fold 3 ===
+train_size=33962, valid_size=8489
+
+[number correct=3908 predict=5178 golden=5600]
+Fold 3 Epoch 1 Train loss=0.0823 Valid loss=0.0473 acc=0.9912 f1=0.7252 p=0.7547 r=0.6979
+
+[number correct=3823 predict=4879 golden=5600]
+Fold 3 Epoch 2 Train loss=0.0710 Valid loss=0.0478 acc=0.9899 f1=0.7296 p=0.7836 r=0.6827
+
+[number correct=3988 predict=5204 golden=5600]
+Fold 3 Epoch 3 Train loss=0.0517 Valid loss=0.0488 acc=0.9894 f1=0.7382 p=0.7663 r=0.7121
+
+[number correct=3961 predict=5033 golden=5600]
+Fold 3 Epoch 4 Train loss=0.0375 Valid loss=0.0466 acc=0.9908 f1=0.7450 p=0.7870 r=0.7073
+
+[number correct=3988 predict=5084 golden=5600]
+Fold 3 Epoch 5 Train loss=0.0289 Valid loss=0.0465 acc=0.9914 f1=0.7465 p=0.7844 r=0.7121
+
+Fold 3 took 0:18:55 (h:mm:ss)
+
+=== Start predicting fold 3 ===
+[number correct=2290 predict=3255 golden=3498]
+Test result saved in ../output/fold_3_intensive_result.csv
+Fold 3 Test loss=0.7523 acc=0.8896 f1=0.6782 p=0.7035 r=0.6547
+
+
+=== Start training fold 4 ===
+train_size=33965, valid_size=8486
+
+[number correct=3931 predict=4833 golden=5550]
+Fold 4 Epoch 1 Train loss=0.0604 Valid loss=0.0366 acc=0.9934 f1=0.7572 p=0.8134 r=0.7083
+
+[number correct=3993 predict=4911 golden=5550]
+Fold 4 Epoch 2 Train loss=0.0518 Valid loss=0.0366 acc=0.9940 f1=0.7634 p=0.8131 r=0.7195
+
+[number correct=4149 predict=5198 golden=5550]
+Fold 4 Epoch 3 Train loss=0.0395 Valid loss=0.0352 acc=0.9940 f1=0.7721 p=0.7982 r=0.7476
+
+[number correct=4204 predict=5201 golden=5550]
+Fold 4 Epoch 4 Train loss=0.0298 Valid loss=0.0330 acc=0.9952 f1=0.7821 p=0.8083 r=0.7575
+
+[number correct=4167 predict=5140 golden=5550]
+Fold 4 Epoch 5 Train loss=0.0233 Valid loss=0.0329 acc=0.9949 f1=0.7796 p=0.8107 r=0.7508
+
+Fold 4 took 0:18:51 (h:mm:ss)
+
+=== Start predicting fold 4 ===
+[number correct=2337 predict=3360 golden=3498]
+Test result saved in ../output/fold_4_intensive_result.csv
+Fold 4 Test loss=0.8014 acc=0.8884 f1=0.6815 p=0.6955 r=0.6681
+
+
+Total took 1:37:11 (h:mm:ss)
+=== Start model ensemble ===
+
+Final result metrics:
+[Arugument number of correct 2244 predict 3115 golden 3244]
+Exact match: f1=0.7058 p=0.7204 r=0.6917
+
+[Token number correct 14589 predict 18746 golden 19367]
+Token level: f1=0.7656 p=0.7782 r=0.7533
+
+Final result saved in ../output/ensemble.csv
+Final print saved in ../output/final.csv
+
+Finished! 2021-06-27 19:47:09
