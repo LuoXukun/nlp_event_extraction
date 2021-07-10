@@ -165,12 +165,13 @@ class CascadeModel(nn.Module):
                 negative_rand_sample_array = np.arange(gold_mask.shape[0])
                 np.random.shuffle(negative_rand_sample_array)
                 # neg_samples_weight times of positive samples at most.
-                negative_samples_max_num = int(neg_samples_weight * torch.sum(gold_mask))
+                # + 1: The sum of gold mask may be 0.
+                negative_samples_max_num = int(neg_samples_weight * (torch.sum(gold_mask) + 1.))
                 gold_mask[negative_rand_sample_array[0:negative_samples_max_num]] = torch.ones(negative_samples_max_num).to(self.device)
                 #print(gold_mask[negative_rand_sample_array[0:negative_samples_max_num]])
                 gold_mask = gold_mask.view(batch_size, -1, seq_len) * seg.view(batch_size, -1, seq_len)
                 loss = self.criterion(feats[idx].float().contiguous().view(-1), gold_feats[idx].float().contiguous().view(-1))
-                total_loss += torch.sum(loss.view(batch_size, -1, seq_len) * gold_mask) / torch.sum(gold_mask)
+                total_loss += torch.sum(loss.view(batch_size, -1, seq_len) * gold_mask) / (torch.sum(gold_mask) + 1.)
             return total_loss
         else:
             for idx in range(4):
