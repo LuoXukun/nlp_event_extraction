@@ -13,7 +13,6 @@
 /models/google_zh_with_sentinel_vocab.txt
 /datasets/event_extraction_dataset/*
 /results/
-/logs/
 /models/bert/*.bin
 .idea/
 .vscode/
